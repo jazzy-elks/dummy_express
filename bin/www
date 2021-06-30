@@ -1,14 +1,14 @@
-var app = require('../app');
-var debug = require('debug')('dummy-express:server');
-var http = require('http');
+const app = require('../app');
+const debug = require('debug')('dummy-express:server');
+const http = require('http');
 
 const { connect, StringCodec } = require("nats");
 const sc = StringCodec();
 
-var port = normalizePort(process.env.PORT || '3030');
+const port = process.env.PORT || '3030';
 app.set('port', port);
 
-var server = http.createServer(app);
+const server = http.createServer(app);
 
 server.listen(port);
 server.on('error', onError);
@@ -20,7 +20,7 @@ function onError(error) {
     throw error;
   }
 
-  var bind = typeof port === 'string'
+  let bind = typeof port === 'string'
     ? 'Pipe ' + port
     : 'Port ' + port;
 
@@ -39,23 +39,23 @@ function onError(error) {
   }
 }
 
-async function subscribe() {
-  const nc = await connect({ servers: "localhost:4222" });
-  const sub = nc.subscribe('FLAG');
-  // console.log(`subscription running: ${sub}`);
-  (async () => {
-    for await (const m of sub) {
-      console.log(`[${sub.getProcessed()}]: ${sc.decode(m.data)}`);
-    }
-    console.log("subscription closed");
-  })();
-}
+// async function subscribe() {
+//   const nc = await connect({ servers: "localhost:4222" });
+//   const sub = nc.subscribe('FLAG');
+//   // console.log(`subscription running: ${sub}`);
+//   (async () => {
+//     for await (const m of sub) {
+//       console.log(`[${sub.getProcessed()}]: ${sc.decode(m.data)}`);
+//     }
+//     console.log("subscription closed");
+//   })();
+// }
 
 function onListening() {
-  var addr = server.address();
-  var bind = typeof addr === 'string'
+  const addr = server.address();
+  const bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  subscribe()
+  // subscribe()
   debug('Listening on ' + bind);
 }
