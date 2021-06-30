@@ -7,14 +7,24 @@ const router = express.Router();
 Note that this route should not be available unless someone
 requests with a valid key for security reasons.
 */
+const validKey = (authHeader) => {
+  const dummyAuthenticator = "JazzyElksRule"
+  return authHeader === dummyAuthenticator;
+}
 
 router.get('/ruleset', function (req, res, next) {
+  const authHeader = req.get('Authorization');
+  if (!validKey(authHeader)) {
+    return res.status(500).send({
+      message: 'Invalid authentication key'
+    });
+  }
+
   // here we need to be able to get the updated ruleset
   // when the SDK demands. this could be from a cache.
 
   // for now, there's a static ruleset.json file
   // in the lib dir.
-
   res.sendFile(path.join(__dirname, '../lib', '/ruleset.json'));
 });
 
