@@ -18,6 +18,7 @@ This ruleset function currently lives in `routes/index.js`.  The final product o
 When a `GET` request comes into the `/ruleset` endpoint, the application first authenticates the request.  The request must have an `Authorization` header with a value `JazzyElksRule` (you can test this out in postman).  If the header isn't present or doesn't have the correct value, an error is returned. If the header is present with the appropriate value, the json will be returned:
 
 ```
+// the key of each object in 'flags' is the flagId.  I think using an object rather than an array is smart here because you'll want the SDK to be able to retrieve a flag's current status in constant time (quickly), rather than iterating through an array of flags looking for a matching id.
 {
   "flags": {
     "1234": {
