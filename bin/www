@@ -12,6 +12,7 @@ var http = require('http');
 const { connect, StringCodec } = require("nats");
 const sc = StringCodec();
 
+
 /**
  * Get port from environment and store in Express.
  */
@@ -81,6 +82,24 @@ function onError(error) {
   }
 }
 
+// "consume_updates" was the consumer name added in mono-prototype
+// jetstreamManager file
+async function jetstreamSubscribe() {
+  const nc = await connect({ servers: "localhost:4222" });
+  const jetStr = nc.jetstream();
+
+
+  let msg = await jetStr.fetch("FLAG", "consume_updates", {batch: 3, expires: 5000})
+  const done = (async () => {
+    for await (const m of iter) {
+      console.log(`Subscriber received the msg: ${msg}`)
+      m.ack();
+    }
+  })
+
+  await done;
+}
+
 async function subscribe() {
   const nc = await connect({ servers: "localhost:4222" });
   const sub = nc.subscribe('FLAG');
@@ -102,6 +121,6 @@ function onListening() {
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  subscribe()
+  jetstreamSubscribe();
   debug('Listening on ' + bind);
 }
