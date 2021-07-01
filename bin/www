@@ -84,17 +84,25 @@ function onError(error) {
 
 // "consume_updates" was the consumer name added in mono-prototype
 // jetstreamManager file
-async function jetstreamSubscribe() {
+async function jetstreamSubscribetoUpdates() {
   const nc = await connect({ servers: "localhost:4222" });
   const jetStr = nc.jetstream();
 
+console.log("jetstream subscribe executing")
 
-  let msg = await jetStr.fetch("FLAG", "consume_updates", {batch: 3, expires: 5000})
+  let msgs = await jetStr.pullSubscribe("FLAG.updated", {config: {durable_name: "consume_updates"}})
   const done = (async () => {
-    for await (const m of iter) {
-      console.log(`Subscriber received the msg: ${msg}`)
+    for await (const m of msgs) {
+      console.log(`${m.info.stream}[${m.seq}]`)
       m.ack();
     }
+
+    msgs.unsubscribe(4);
+
+// To start receiving messages you pull the subscription
+setInterval(() => {
+  psub.pull({ batch: 10, expires: 10000 });
+}, 10000);
   })
 
   await done;
@@ -121,6 +129,6 @@ function onListening() {
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  jetstreamSubscribe();
+  jetstreamSubscribetoUpdates();
   debug('Listening on ' + bind);
 }
