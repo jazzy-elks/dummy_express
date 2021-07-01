@@ -82,6 +82,7 @@ function onError(error) {
   }
 }
 
+/*
 // "consume_updates" was the consumer name added in mono-prototype
 // jetstreamManager file
 async function jetstreamSubscribetoUpdates() {
@@ -91,6 +92,8 @@ async function jetstreamSubscribetoUpdates() {
 console.log("jetstream subscribe executing")
 
   let msgs = await jetStr.pullSubscribe("FLAG.updated", {config: {durable_name: "consume_updates"}})
+  console.log("msg", msgs)
+  
   const done = (async () => {
     for await (const m of msgs) {
       console.log(`${m.info.stream}[${m.seq}]`)
@@ -120,6 +123,34 @@ async function subscribe() {
   })();
 }
 
+*/
+
+async function subscribe() {
+  const nc = await connect({ servers: "localhost:4222" });
+  // create a jetstream client
+  // https://github.com/nats-io/nats.deno/blob/main/jetstream.md#jetstream-client
+  const js = nc.jetstream();
+  const opts = consumerOpts();
+  opts.durable("me");
+  opts.manualAck();
+  opts.ackExplicit();
+  opts.deliverTo(createInbox());
+
+  // push subscription - https://github.com/nats-io/nats.deno/blob/main/jetstream.md#push-subscriptions
+  const sub = await js.subscribe('FLAG.*', opts);
+
+  console.log(`subscription running: ${sub}`);
+  (async () => {
+    for await (const m of sub) {
+      m.ack();
+      console.log("M: ", m);
+      console.log(`[${sub.getProcessed()}]: ${sc.decode(m.data)}`);
+    }
+    console.log("subscription closed");
+  })();
+}
+
+
 /**
  * Event listener for HTTP server "listening" event.
  */
@@ -129,6 +160,8 @@ function onListening() {
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  jetstreamSubscribetoUpdates();
+  subscribe();
   debug('Listening on ' + bind);
 }
+
+
