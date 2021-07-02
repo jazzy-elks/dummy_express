@@ -95,7 +95,7 @@ console.log("jetstream subscribe executing")
 
   let msgs = await jetStr.pullSubscribe("FLAG.updated", {config: {durable_name: "consume_updates"}})
   console.log("msg", msgs)
-  
+
   const done = (async () => {
     for await (const m of msgs) {
       console.log(`${m.info.stream}[${m.seq}]`)
@@ -130,7 +130,7 @@ async function subscribe() {
 // can only get all messages from the stream, not specific subjects
 async function pushSubscribe() {
   const nc = await connect({ servers: "localhost:4222" });
-  
+
   // create a jetstream client
   // https://github.com/nats-io/nats.deno/blob/main/jetstream.md#jetstream-client
   const js = nc.jetstream();
@@ -138,7 +138,6 @@ async function pushSubscribe() {
   // opts.durable("me"); // cant set this to a consumer named in jetstreamManager
   opts.manualAck();
   opts.ackExplicit();
-  
   opts.deliverTo(createInbox());
 
 
@@ -159,10 +158,10 @@ async function updateSubscribe() {
   const nc = await connect({ servers: "localhost:4222" });
   const js = nc.jetstream();
 
-  
-  const sub = await js.pullSubscribe('FLAG.updated', {config: 
+
+  const sub = await js.pullSubscribe('FLAG.updated', {config:
     {
-      durable_name: "consume_updates", 
+      durable_name: "consume_updates",
       deliver_subject: "FLAG.updated",
       filter_subject: "FLAG.updated"
   }
@@ -191,9 +190,7 @@ function onListening() {
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  pushSubscribe();
+  //pushSubscribe();
   updateSubscribe();
   debug('Listening on ' + bind);
 }
-
-
