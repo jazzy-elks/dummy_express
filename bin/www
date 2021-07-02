@@ -9,7 +9,9 @@ var debug = require('debug')('dummy-express:server');
 var http = require('http');
 
 
-const { connect, StringCodec } = require("nats");
+
+const { connect, StringCodec, consumerOpts, createInbox} = require('nats');
+
 const sc = StringCodec();
 
 
@@ -125,31 +127,60 @@ async function subscribe() {
 
 */
 
-async function subscribe() {
+// can only get all messages from the stream, not specific subjects
+async function pushSubscribe() {
   const nc = await connect({ servers: "localhost:4222" });
+  
   // create a jetstream client
   // https://github.com/nats-io/nats.deno/blob/main/jetstream.md#jetstream-client
   const js = nc.jetstream();
   const opts = consumerOpts();
-  opts.durable("me");
+  // opts.durable("me"); // cant set this to a consumer named in jetstreamManager
   opts.manualAck();
   opts.ackExplicit();
+  
   opts.deliverTo(createInbox());
 
-  // push subscription - https://github.com/nats-io/nats.deno/blob/main/jetstream.md#push-subscriptions
+
   const sub = await js.subscribe('FLAG.*', opts);
 
-  console.log(`subscription running: ${sub}`);
+  console.log(`push subscription running`);
   (async () => {
     for await (const m of sub) {
       m.ack();
-      console.log("M: ", m);
-      console.log(`[${sub.getProcessed()}]: ${sc.decode(m.data)}`);
+      //console.log("M: ", m);
+      console.log(`Data from pushSubscribe func: ${sc.decode(m.data)}`);
     }
     console.log("subscription closed");
   })();
 }
 
+async function updateSubscribe() {
+  const nc = await connect({ servers: "localhost:4222" });
+  const js = nc.jetstream();
+
+  
+  const sub = await js.pullSubscribe('FLAG.updated', {config: 
+    {
+      durable_name: "consume_updates", 
+      deliver_subject: "FLAG.updated",
+      filter_subject: "FLAG.updated"
+  }
+});
+
+  console.log(`pull subscription running`);
+  (async () => {
+    for await (const m of sub) {
+      m.ack();
+      console.log(`Data from updateSubscribe func; subject: ${m.subject}: ${sc.decode(m.data)}`);
+    }
+    console.log("subscription closed");
+  })();
+
+  setInterval(() => {
+    sub.pull({batch: 10, expires: 1000})
+  }, 1000)
+}
 
 /**
  * Event listener for HTTP server "listening" event.
@@ -160,7 +191,8 @@ function onListening() {
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  subscribe();
+  pushSubscribe();
+  updateSubscribe();
   debug('Listening on ' + bind);
 }
 
