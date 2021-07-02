@@ -147,7 +147,6 @@ async function pushSubscribe() {
   (async () => {
     for await (const m of sub) {
       m.ack();
-      //console.log("M: ", m);
       console.log(`Data from pushSubscribe func: ${sc.decode(m.data)}`);
     }
     console.log("subscription closed");
@@ -159,15 +158,15 @@ async function updateSubscribe() {
   const js = nc.jetstream();
 
 
-  const sub = await js.pullSubscribe('FLAG.updated', {config:
+  const sub = await js.subscribe('FLAG.updated', {config:
     {
       durable_name: "consume_updates",
-      deliver_subject: "FLAG.updated",
+      deliver_subject: "updated",
       filter_subject: "FLAG.updated"
   }
 });
 
-  console.log(`pull subscription running`);
+  console.log(`push subscription running`);
   (async () => {
     for await (const m of sub) {
       m.ack();
@@ -175,10 +174,6 @@ async function updateSubscribe() {
     }
     console.log("subscription closed");
   })();
-
-  setInterval(() => {
-    sub.pull({batch: 10, expires: 1000})
-  }, 1000)
 }
 
 /**
