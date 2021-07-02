@@ -1,64 +1,17 @@
-#!/usr/bin/env node
-
-/**
- * Module dependencies.
- */
-
-var app = require('../app');
-var debug = require('debug')('dummy-express:server');
-var http = require('http');
-
-
-
-const { connect, StringCodec, consumerOpts, createInbox} = require('nats');
-
-const sc = StringCodec();
-
-
-/**
- * Get port from environment and store in Express.
- */
-
-var port = normalizePort(process.env.PORT || '3030');
+const app = require('../app');
+const debug = require('debug')('dummy-express:server');
+const http = require('http');
+const port = process.env.PORT || '3030';
 app.set('port', port);
 
-/**
- * Create HTTP server.
- */
+const server = http.createServer(app);
 
-var server = http.createServer(app);
-
-/**
- * Listen on provided port, on all network interfaces.
- */
+const subscription = require('../lib/jetstream');
 
 server.listen(port);
 server.on('error', onError);
 server.on('listening', onListening);
 
-/**
- * Normalize a port into a number, string, or false.
- */
-
-function normalizePort(val) {
-  var port = parseInt(val, 10);
-
-  if (isNaN(port)) {
-    // named pipe
-    return val;
-  }
-
-  if (port >= 0) {
-    // port number
-    return port;
-  }
-
-  return false;
-}
-
-/**
- * Event listener for HTTP server "error" event.
- */
 
 function onError(error) {
   if (error.syscall !== 'listen') {
@@ -84,108 +37,12 @@ function onError(error) {
   }
 }
 
-/*
-// "consume_updates" was the consumer name added in mono-prototype
-// jetstreamManager file
-async function jetstreamSubscribetoUpdates() {
-  const nc = await connect({ servers: "localhost:4222" });
-  const jetStr = nc.jetstream();
-
-console.log("jetstream subscribe executing")
-
-  let msgs = await jetStr.pullSubscribe("FLAG.updated", {config: {durable_name: "consume_updates"}})
-  console.log("msg", msgs)
-
-  const done = (async () => {
-    for await (const m of msgs) {
-      console.log(`${m.info.stream}[${m.seq}]`)
-      m.ack();
-    }
-
-    msgs.unsubscribe(4);
-
-// To start receiving messages you pull the subscription
-setInterval(() => {
-  psub.pull({ batch: 10, expires: 10000 });
-}, 10000);
-  })
-
-  await done;
-}
-
-async function subscribe() {
-  const nc = await connect({ servers: "localhost:4222" });
-  const sub = nc.subscribe('FLAG');
-  // console.log(`subscription running: ${sub}`);
-  (async () => {
-    for await (const m of sub) {
-      console.log(`[${sub.getProcessed()}]: ${sc.decode(m.data)}`);
-    }
-    console.log("subscription closed");
-  })();
-}
-
-*/
-
-// can only get all messages from the stream, not specific subjects
-async function pushSubscribe() {
-  const nc = await connect({ servers: "localhost:4222" });
-
-  // create a jetstream client
-  // https://github.com/nats-io/nats.deno/blob/main/jetstream.md#jetstream-client
-  const js = nc.jetstream();
-  const opts = consumerOpts();
-  // opts.durable("me"); // cant set this to a consumer named in jetstreamManager
-  opts.manualAck();
-  opts.ackExplicit();
-  opts.deliverTo(createInbox());
-
-
-  const sub = await js.subscribe('FLAG.*', opts);
-
-  console.log(`push subscription running`);
-  (async () => {
-    for await (const m of sub) {
-      m.ack();
-      console.log(`Data from pushSubscribe func: ${sc.decode(m.data)}`);
-    }
-    console.log("subscription closed");
-  })();
-}
-
-async function updateSubscribe() {
-  const nc = await connect({ servers: "localhost:4222" });
-  const js = nc.jetstream();
-
-
-  const sub = await js.subscribe('FLAG.updated', {config:
-    {
-      durable_name: "consume_updates",
-      deliver_subject: "updated",
-      filter_subject: "FLAG.updated"
-  }
-});
-
-  console.log(`push subscription running`);
-  (async () => {
-    for await (const m of sub) {
-      m.ack();
-      console.log(`Data from updateSubscribe func; subject: ${m.subject}: ${sc.decode(m.data)}`);
-    }
-    console.log("subscription closed");
-  })();
-}
-
-/**
- * Event listener for HTTP server "listening" event.
- */
-
 function onListening() {
   var addr = server.address();
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  //pushSubscribe();
-  updateSubscribe();
+
+  subscription.initSubscribe();
   debug('Listening on ' + bind);
 }
