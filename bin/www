@@ -9,6 +9,7 @@ app.set('port', port);
 
 const server = http.createServer(app);
 const subscription = require('../lib/jetstream');
+const requestAllDataFromCache = require('../lib/jetstream');
 
 
 server.listen(port);
@@ -46,5 +47,6 @@ function onListening() {
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   subscription.initSubscribe();
+  requestAllDataFromCache();
   debug('Listening on ' + bind);
 }
